@@ -1,0 +1,40 @@
+# Core FastAPI & Server
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+pydantic>=2.9.0
+pydantic-settings>=2.5.0
+email-validator>=2.2.0
+python-multipart>=0.0.12
+
+# Database & Migrations
+SQLAlchemy>=2.0.35
+alembic>=1.13.0
+psycopg2-binary>=2.9.9
+
+# Redis & Celery
+redis>=5.0.8
+celery>=5.4.0
+
+# Security & Cryptography
+PyJWT>=2.9.0
+bcrypt>=4.2.0
+cryptography>=43.0.0
+
+# AI & Anomaly Detection
+torch>=2.4.0
+drain3>=0.9.11
+sentence-transformers>=3.1.0
+faiss-cpu>=1.8.0
+google-genai>=2.33.0
+langgraph>=0.2.0
+langchain-core>=0.3.0
+
+# Observability & Monitoring
+prometheus-client>=0.21.0
+python-json-logger>=2.0.7
+httpx>=0.27.0
+requests>=2.32.0
+
+# Testing
+pytest>=8.3.0
+

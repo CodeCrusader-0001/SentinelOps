@@ -1,0 +1,95 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: sentinelops_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-sentinelops}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sentinelops_password}
+      POSTGRES_DB: ${POSTGRES_DB:-sentinelops_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sentinelops -d sentinelops_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: sentinelops_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: sentinelops_backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=production
+      - DATABASE_URL=postgresql+psycopg2://${POSTGRES_USER:-sentinelops}:${POSTGRES_PASSWORD:-sentinelops_password}@postgres:5432/${POSTGRES_DB:-sentinelops_db}
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-3.8-flash}
+      - SECRET_KEY=${SECRET_KEY:-sentinelops_super_secure_jwt_secret_key_2026_enterprise_grade}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  celery_worker:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: sentinelops_worker
+    restart: unless-stopped
+    command: ["celery", "-A", "backend.app.workers.celery_app.celery_app", "worker", "-l", "info", "--concurrency=4"]
+    environment:
+      - ENVIRONMENT=production
+      - DATABASE_URL=postgresql+psycopg2://${POSTGRES_USER:-sentinelops}:${POSTGRES_PASSWORD:-sentinelops_password}@postgres:5432/${POSTGRES_DB:-sentinelops_db}
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-3.8-flash}
+      - SECRET_KEY=${SECRET_KEY:-sentinelops_super_secure_jwt_secret_key_2026_enterprise_grade}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: sentinelops_frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+  redis_data:
+
